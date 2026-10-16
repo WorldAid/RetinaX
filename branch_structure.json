@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "docs/readme-accuracy-fixes",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "docs/readme-accuracy-fixes": "main",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "docs/readme-accuracy-fixes",
+    "origin"
+  ]
+}

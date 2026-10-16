@@ -3,7 +3,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.78%2B-orange.svg)](https://www.rust-lang.org/)
 [![Soroban](https://img.shields.io/badge/Soroban-v23.1.4-blue.svg)](https://soroban.stellar.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![CI](https://github.com/Ogbodo-Oluebube/RetinaX/actions/workflows/ci.yml/badge.svg)](https://github.com/Ogbodo-Oluebube/RetinaX/actions)
+[![CI](https://github.com/WorldAid/RetinaX/actions/workflows/ci.yml/badge.svg)](https://github.com/WorldAid/RetinaX/actions)
 
 RetinaX is a decentralized smart contract system for secure, encrypted, and role-based management of vision care and optometry records on the Stellar blockchain using Soroban and Rust. The project enables eye care providers and patients to maintain control over sensitive vision data while ensuring privacy, immutability, and auditability. Built specifically for optometry clinics, ophthalmology practices, and vision research institutions transitioning to blockchain-based record keeping.
 
@@ -13,23 +13,23 @@ The platform provides a comprehensive solution for modern vision care data manag
 
 ## Table of Contents
 
-- [Project Overview](#-project-overview)
-- [Setup Instructions](#-setup-instructions)
-  - [Prerequisites](#-prerequisites)
-  - [Quick Start](#-quick-start)
-  - [Environment Setup](#-environment-setup)
-  - [Running Tests](#-running-tests)
-  - [Network Configuration](#-network-configuration)
-- [Features](#-features)
-- [Project Structure](#-project-structure)
-- [Usage Examples](#-usage-examples)
-- [Deployment](#-deployment)
-- [CI/CD Pipeline](#-cicd-pipeline)
-- [Helpful Links](#-helpful-links)
-- [Contribution Guidelines](#-contribution-guidelines)
-- [License](#-license)
-- [Compliance Documentation](docs/compliance/) - HIPAA compliance and regulatory requirements
-- [Support](#-support)
+- [Project Overview](#project-overview)
+- [Setup Instructions](#setup-instructions)
+  - [Prerequisites](#prerequisites)
+  - [Quick Start](#quick-start)
+  - [Environment Setup](#environment-setup)
+  - [Running Tests](#running-tests)
+  - [Network Configuration](#network-configuration)
+- [Features](#features)
+- [Micro-Contract Architecture](#micro-contract-architecture)
+- [Project Structure](#project-structure)
+- [Usage Examples](#usage-examples)
+- [Deployment](#deployment)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Helpful Links](#helpful-links)
+- [Contribution Guidelines](#contribution-guidelines)
+- [License](#license)
+- [Support](#support)
 
 ---
 
@@ -74,8 +74,8 @@ Get up and running in under 5 minutes:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Ogbodo-Oluebube/RetinaX.git
-cd RetinaX-Contracts
+git clone https://github.com/WorldAid/RetinaX.git
+cd RetinaX
 
 # Run the automated setup script
 chmod +x setup.sh
@@ -219,34 +219,30 @@ graph TD
 ## Project Structure
 
 ```
-RetinaX-Contracts/
+RetinaX/
 │
-├── contracts/
-│   └── vision_records/
-│       ├── src/
-│       │   └── lib.rs           # Main contract logic
-│       └── Cargo.toml           # Contract dependencies
+├── contracts/                  # Soroban smart contracts (Cargo workspace members)
+│   ├── vision_records/         # Core optometry records, consent & prescriptions
+│   ├── identity/               # DIDs and social recovery
+│   ├── key_manager/            # HD key derivation & rotation
+│   ├── zk_verifier/            # Zero-knowledge proof verification
+│   ├── audit/                  # Immutable, chained audit log
+│   ├── governor/ timelock/     # On-chain governance
+│   ├── common/                 # Shared types and helpers
+│   └── ...                     # analytics, compliance, fhir, staking, treasury, etc.
 │
-├── scripts/                     # Deployment and interaction scripts
-│   ├── deploy.sh               # Contract deployment
-│   ├── interact.sh             # Contract interaction
-│   └── test_scripts/           # Test utilities
+├── sdk/zk_prover/              # Off-chain ZK proof generation SDK
+├── test/                       # Shared test framework, negative & upgrade tests
+├── tests/integration/          # Cross-contract integration tests
+├── fuzz/                       # Fuzzing targets
+├── scripts/                    # Deployment, release & monitoring scripts
+│   └── monitor/                # Prometheus/Grafana stack and health check
+├── website/                    # Project website (GitHub Pages)
+├── docs/                       # Architecture, API, onboarding, runbooks, compliance
 │
-├── tests/
-│   ├── integration/            # Integration tests
-│   └── unit/                   # Unit tests
-│
-├── docs/                       # Documentation
-│   ├── api.md                  # API reference
-│   └── architecture.md         # Architecture details
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml              # Continuous integration
-│
+├── .github/workflows/          # CI workflows
 ├── setup.sh                    # Automated setup script
-├── Makefile                    # Build automation
-├── Dockerfile                  # Docker support
+├── Makefile                    # Build automation (`make help` lists targets)
 ├── Cargo.toml                  # Workspace configuration
 └── README.md                   # This file
 ```
@@ -329,10 +325,13 @@ make deploy-mainnet
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `ci.yml` | Push/PR | Build, test, lint |
-| `security.yml` | Push/PR/Daily | Security scanning |
-| `deploy-testnet.yml` | Push to develop | Auto-deploy to testnet |
-| `deploy-mainnet.yml` | Manual | Production deployment |
+| `cargo-test.yml` | Push/PR to `main` | Build and test the Cargo workspace |
+| `rust-fmt.yml` | Push/PR touching Rust code | `cargo fmt` check |
+| `identity-ci.yml` | Push/PR touching `identity` | Identity contract build, lint & tests |
+| `key-manager-ci.yml` | Push/PR touching `key_manager` | Key Manager contract build, lint & tests |
+| `zk-verifier-ci.yml` | Push/PR touching `zk_verifier` | ZK Verifier contract build, lint & tests |
+| `frontend-lint.yml` | Push/PR touching `website/` | ESLint/Prettier checks for the website |
+| `pages.yml` | Push to `main` | Deploy the website to GitHub Pages |
 
 ### Deployment Scripts
 
@@ -340,11 +339,8 @@ make deploy-mainnet
 # Deploy with rollback support
 ./scripts/deploy_with_rollback.sh testnet
 
-# Monitor deployment status
-./scripts/monitor_deployments.sh
-
-# Check deployment status
-./scripts/deployment_status.sh
+# Run a contract / RPC health check
+./scripts/monitor/health_check.sh
 ```
 
 ---
@@ -358,6 +354,7 @@ make deploy-mainnet
 - [Data Flow Diagrams](docs/data-flows.md)
 - [Security Model](docs/security.md)
 - [Production Runbook](docs/runbook/README.md)
+- [Compliance Documentation](docs/compliance/README.md) - HIPAA compliance and regulatory requirements
 
 ### Repository Resources
 
@@ -440,14 +437,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## Supports
+## Support
 
-- **Issues**: [GitHub Issues](https://github.com/Ogbodo-Oluebube/RetinaX/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Ogbodo-Oluebube/RetinaX/discussions)
+- **Issues**: [GitHub Issues](https://github.com/WorldAid/RetinaX/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/WorldAid/RetinaX/discussions)
 - **Discord**: [Join our Discord](https://discord.gg/stellar-retinax)
 
 ---
 
 <p align="center">
-  Built with on Stellar
+  Built with ❤️ on Stellar
 </p>
